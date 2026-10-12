@@ -1,0 +1,89 @@
+
+import nmap
+
+scanner = nmap.PortScanner()
+
+print("===== NMAP NETWORK SCANNING =====")
+print("1. Ping Scan")
+print("2. Quick Scan")
+print("3. Regular Scan")
+print("4. Intense Scan")
+print("5. Service Version Detection")
+print("6. OS Detection")
+
+choice = input("Enter your choice (1-6): ")
+target = input("Enter target IP address: ")
+
+scan_options = {
+    "1": "-sn",
+    "2": "-T4 -F",
+    "3": "-sT",
+    "4": "-A -T4",
+    "5": "-sV",
+    "6": "-O"
+}
+
+if choice not in scan_options:
+    print("Invalid choice!")
+else:
+    try:
+        print("\nScanning:", target)
+        print("Please wait...")
+
+        result = scanner.scan(
+            hosts=target,
+            arguments=scan_options[choice]
+        )
+
+        for host in scanner.all_hosts():
+            print("\n========== SCAN RESULTS ==========")
+            print("Target IP:", host)
+            print("Hostname:", scanner[host].hostname())
+            print("Host Status:", scanner[host].state())
+
+            print("\n--- Open Ports and Services ---")
+
+            for protocol in scanner[host].all_protocols():
+                for port in sorted(scanner[host][protocol].keys()):
+                    details = scanner[host][protocol][port]
+
+                    if details["state"] == "open":
+                        print("Port:", port)
+                        print("Protocol:", protocol)
+                        print("Service:", details["name"])
+                        print("Product:", details.get("product", "Unknown"))
+                        print("Version:", details.get("version", "Unknown"))
+                        print("---------------------------")
+
+            if choice == "6" or choice == "4":
+                print("\n--- Operating System ---")
+                os_matches = scanner[host].get("osmatch", [])
+
+                if os_matches:
+                    for os in os_matches:
+                        print("OS:", os["name"])
+                        print("Accuracy:", os["accuracy"] + "%")
+                else:
+                    print("OS detection unavailable")
+
+            if choice == "4":
+                print("\n--- Traceroute ---")
+                trace = scanner[host].get("trace", {})
+                hops = trace.get("hops", [])
+
+                if hops:
+                    for hop in hops:
+                        print(
+                            "Hop:", hop.get("ttl"),
+                            "IP:", hop.get("ipaddr", "*"),
+                            "Host:", hop.get("host", "Unknown")
+                        )
+                else:
+                    print("Traceroute unavailable")
+
+        print("\nScan completed!")
+
+    except nmap.PortScannerError as error:
+        print("Nmap error:", error)
+    except Exception as error:
+        print("Error:", error)
